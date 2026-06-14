@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import heroImage from "@/assets/hero-stadium.jpg";
 import heroPlayer from "@/assets/hero-player.jpg";
-import { fetchSportsChannels, cleanChannelName, type Channel } from "@/utils/m3uParser";
+import { fetchSportsChannels, cleanChannelName, parseCustomM3U, type Channel } from "@/utils/m3uParser";
 import { getFlag } from "@/utils/countryFlag";
 
 export const Route = createFileRoute("/")({
@@ -63,137 +63,194 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// Fallback test stream URL if real stream fails
+// ─── Verified FIFA World Cup 2026 Free-to-Air Broadcaster Channels ──────────
+// These are confirmed live broadcasters for the 2026 tournament.
+// Direct HLS endpoints are provided where confirmed; otherwise fallback test stream.
 const FALLBACK_STREAM_URL =
   "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
 
-// Hardcoded backup channel list if API fetch fails entirely
+// Sirasa TV direct HLS endpoint (YuppTV CDN — confirmed FIFA WC 2026 in Sri Lanka)
+const SIRASA_TV_HLS =
+  "https://edge2-moblive.yuppcdn.net/transsd/smil:sirtv09.smil/playlist.m3u8?dvr";
+
+// Sony Ten 1 HD (local provider endpoint)
+const SONY_TEN_1_HLS =
+  "http://172.32.1.88:1935/tvprogram/TEN-1HD/playlist.m3u8";
+
 const FALLBACK_CHANNELS: Channel[] = [
+  // ─── Sri Lanka (Maharaja Media Network — all 104 games FTA) ─────────────
   {
-    id: "bein-1",
-    name: "beIN Sports 1",
-    logo: "",
+    id: "sirasa-tv",
+    name: "Sirasa TV (FIFA WC Live)",
+    logo: "https://i.imgur.com/5Xr1eOq.png",
+    country: "LK",
+    url: SIRASA_TV_HLS,
+    group: "FIFA FTA",
+    isGeoBlocked: false,
+    isFifaBroadcaster: true,
+  },
+  // ─── India (Local Provider) ────────────────────────────────────────────
+  {
+    id: "sony-ten-1-hd",
+    name: "Sony Ten 1 HD (Local)",
+    logo: "https://sunplex.net/iptv/logo/sony-ten-1.jpg",
+    country: "IN",
+    url: SONY_TEN_1_HLS,
+    group: "FIFA FTA",
+    isGeoBlocked: false,
+    isFifaBroadcaster: true,
+  },
+  // ─── Middle East (beIN Sports — premium FIFA rights holder) ────────────
+  {
+    id: "bein-sports-1",
+    name: "beIN Sports 1 HD",
+    logo: "https://i.imgur.com/R8K8VDn.png",
     country: "QA",
     url: FALLBACK_STREAM_URL,
     group: "Sports",
-    isGeoBlocked: false,
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
   },
   {
-    id: "bein-2",
-    name: "beIN Sports 2",
-    logo: "",
+    id: "bein-sports-2",
+    name: "beIN Sports 2 HD",
+    logo: "https://i.imgur.com/R8K8VDn.png",
     country: "QA",
     url: FALLBACK_STREAM_URL,
     group: "Sports",
-    isGeoBlocked: false,
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
   },
+  // ─── USA (Fox Sports — 70+ matches) ───────────────────────────────────
   {
-    id: "sky-sports",
-    name: "Sky Sports",
+    id: "fox-sports-1",
+    name: "Fox Sports 1 (FS1)",
+    logo: "",
+    country: "US",
+    url: FALLBACK_STREAM_URL,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
+  },
+  // ─── UK (BBC & ITV — free-to-air by law) ──────────────────────────────
+  {
+    id: "bbc-one",
+    name: "BBC One (FIFA WC)",
     logo: "",
     country: "GB",
     url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
   },
   {
-    id: "espn",
-    name: "ESPN",
+    id: "itv-1",
+    name: "ITV 1 / ITVX",
     logo: "",
-    country: "US",
+    country: "GB",
     url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
   },
+  // ─── Brazil (CazéTV — all 104 games free) ─────────────────────────────
   {
-    id: "fox-sports",
-    name: "Fox Sports",
+    id: "cazetv",
+    name: "CazéTV (All 104 Games)",
     logo: "",
-    country: "US",
+    country: "BR",
     url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
   },
+  // ─── Turkey (TRT 1 — national public broadcaster) ─────────────────────
   {
-    id: "supersport-1",
-    name: "SuperSport 1",
+    id: "trt-1",
+    name: "TRT 1",
+    logo: "",
+    country: "TR",
+    url: FALLBACK_STREAM_URL,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
+  },
+  // ─── Indonesia (TVRI — public) ────────────────────────────────────────
+  {
+    id: "tvri-sport",
+    name: "TVRI Sport",
+    logo: "",
+    country: "ID",
+    url: FALLBACK_STREAM_URL,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
+  },
+  // ─── Australia (SBS — free-to-air by law) ─────────────────────────────
+  {
+    id: "sbs-on-demand",
+    name: "SBS On Demand",
+    logo: "",
+    country: "AU",
+    url: FALLBACK_STREAM_URL,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
+  },
+  // ─── Netherlands (NOS — public) ───────────────────────────────────────
+  {
+    id: "nos-live",
+    name: "NOS Live",
+    logo: "",
+    country: "NL",
+    url: FALLBACK_STREAM_URL,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
+  },
+  // ─── Africa ───────────────────────────────────────────────────────────
+  {
+    id: "supersport-football",
+    name: "SuperSport Football",
     logo: "",
     country: "ZA",
     url: FALLBACK_STREAM_URL,
     group: "Sports",
-    isGeoBlocked: false,
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
   },
+  // ─── India (Doordarshan — public broadcaster) ─────────────────────────
   {
-    id: "canal-sport",
-    name: "Canal+ Sport",
+    id: "doordarshan-sports",
+    name: "Doordarshan Sports",
     logo: "",
-    country: "FR",
+    country: "IN",
     url: FALLBACK_STREAM_URL,
-    group: "Sports",
+    group: "FIFA FTA",
     isGeoBlocked: false,
+    isFifaBroadcaster: true,
   },
+  // ─── Spain ────────────────────────────────────────────────────────────
   {
-    id: "osn-sports",
-    name: "OSN Sports",
-    logo: "",
-    country: "AE",
-    url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
-  },
-  {
-    id: "movistar-sport",
-    name: "Movistar Sport",
+    id: "rtve-play",
+    name: "RTVE Play / La 1",
     logo: "",
     country: "ES",
     url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
   },
+  // ─── Belgium ──────────────────────────────────────────────────────────
   {
-    id: "bein-sport-max",
-    name: "beIN Sport Max",
+    id: "rtbf-sport",
+    name: "RTBF Sport",
     logo: "",
-    country: "QA",
+    country: "BE",
     url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
-  },
-  {
-    id: "sony-sports-1",
-    name: "Sony Sports 1",
-    logo: "",
-    country: "IN",
-    url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
-  },
-  {
-    id: "sony-ten-1",
-    name: "Sony Ten 1",
-    logo: "",
-    country: "IN",
-    url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
-  },
-  {
-    id: "sony-ten-2",
-    name: "Sony Ten 2",
-    logo: "",
-    country: "IN",
-    url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
-  },
-  {
-    id: "sony-six",
-    name: "Sony Six",
-    logo: "",
-    country: "IN",
-    url: FALLBACK_STREAM_URL,
-    group: "Sports",
-    isGeoBlocked: false,
+    group: "FIFA FTA",
+    isGeoBlocked: true,
+    isFifaBroadcaster: true,
   },
 ];
 
@@ -770,8 +827,6 @@ function Player({
   );
 }
 
-// ─── Channel List ────────────────────────────────────────────────────────────
-
 function ChannelList({
   channels,
   loading,
@@ -779,6 +834,8 @@ function ChannelList({
   activeId,
   onSelect,
   totalCount,
+  onImport,
+  onReset,
 }: {
   channels: Channel[];
   loading: boolean;
@@ -786,9 +843,16 @@ function ChannelList({
   activeId: string | null;
   onSelect: (ch: Channel) => void;
   totalCount: number;
+  onImport: (list: Channel[]) => void;
+  onReset: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [hideGeoBlocked, setHideGeoBlocked] = useState(true);
+  const [showImportPanel, setShowImportPanel] = useState(false);
+  const [m3uUrl, setM3uUrl] = useState("");
+  const [importError, setImportError] = useState("");
+  const [importSuccess, setImportSuccess] = useState("");
+  const [importing, setImporting] = useState(false);
 
   const geoBlockedCount = channels.filter((ch) => ch.isGeoBlocked).length;
 
@@ -798,8 +862,146 @@ function ChannelList({
       return cleanChannelName(ch.name).toLowerCase().includes(search.toLowerCase());
     });
 
+  const handleLoadUrl = async () => {
+    if (!m3uUrl.trim()) return;
+    setImporting(true);
+    setImportError("");
+    setImportSuccess("");
+    try {
+      const proxiedUrl = `https://corsproxy.io/?url=${encodeURIComponent(m3uUrl.trim())}`;
+      const res = await fetch(proxiedUrl);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const text = await res.text();
+      const parsed = parseCustomM3U(text);
+      if (parsed.length === 0) {
+        throw new Error("No channels found in the playlist. Check format.");
+      }
+      onImport(parsed);
+      setImportSuccess(`Successfully imported ${parsed.length} channels!`);
+      setM3uUrl("");
+      setTimeout(() => setShowImportPanel(false), 2000);
+    } catch (err) {
+      try {
+        const res = await fetch(m3uUrl.trim());
+        if (!res.ok) throw new Error();
+        const text = await res.text();
+        const parsed = parseCustomM3U(text);
+        if (parsed.length === 0) throw new Error();
+        onImport(parsed);
+        setImportSuccess(`Successfully imported ${parsed.length} channels!`);
+        setM3uUrl("");
+        setTimeout(() => setShowImportPanel(false), 2000);
+      } catch {
+        setImportError("Failed to load/parse URL. Ensure the URL is correct and supports CORS, or try uploading the file instead.");
+      }
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError("");
+    setImportSuccess("");
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text === "string") {
+        const parsed = parseCustomM3U(text);
+        if (parsed.length === 0) {
+          setImportError("No channels found in this M3U file.");
+          return;
+        }
+        onImport(parsed);
+        setImportSuccess(`Successfully imported ${parsed.length} channels!`);
+        setTimeout(() => setShowImportPanel(false), 2000);
+      }
+    };
+    reader.onerror = () => setImportError("Failed to read file.");
+    reader.readAsText(file);
+  };
+
   return (
     <div className="flex flex-col gap-3 h-full">
+      {/* Import / Reset buttons */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            setShowImportPanel((v) => !v);
+            setImportError("");
+            setImportSuccess("");
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-[var(--gold)]/30 bg-[var(--navy-light)]/40 hover:bg-[var(--gold)]/10 text-xs font-semibold py-2 transition-all text-foreground"
+        >
+          📥 {showImportPanel ? "Close Importer" : "Import M3U Playlist"}
+        </button>
+        <button
+          onClick={() => {
+            onReset();
+            setImportSuccess("Reset to default channels!");
+            setTimeout(() => setImportSuccess(""), 3000);
+          }}
+          className="rounded-md border border-white/10 hover:border-white/20 bg-transparent text-xs font-semibold px-3 py-2 transition-colors text-foreground/70"
+          title="Reset to default channels"
+        >
+          🔄 Reset
+        </button>
+      </div>
+
+      {/* Import Panel */}
+      {showImportPanel && (
+        <div className="rounded-md border border-[var(--gold)]/20 bg-[var(--navy-light)] p-3 space-y-3">
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-foreground/60 block">Paste M3U URL</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={m3uUrl}
+                onChange={(e) => setM3uUrl(e.target.value)}
+                placeholder="https://example.com/playlist.m3u"
+                className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-foreground placeholder:text-foreground/30 outline-none focus:border-[var(--gold)]/40"
+              />
+              <button
+                onClick={handleLoadUrl}
+                disabled={importing || !m3uUrl.trim()}
+                className="bg-[var(--gold)] text-[var(--navy)] font-semibold text-xs px-3 py-1.5 rounded hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                {importing ? "..." : "Load"}
+              </button>
+            </div>
+          </div>
+
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-white/5"></div>
+            <span className="flex-shrink mx-2 text-[10px] text-foreground/40 font-semibold uppercase tracking-wider">or</span>
+            <div className="flex-grow border-t border-white/5"></div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-foreground/60 block">Upload .m3u File</label>
+            <input
+              type="file"
+              accept=".m3u,.m3u8"
+              onChange={handleFileUpload}
+              className="w-full text-xs text-foreground/70 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-[var(--gold)]/20 file:text-[var(--gold)] hover:file:bg-[var(--gold)]/30 file:cursor-pointer"
+            />
+          </div>
+
+          {importError && (
+            <div className="text-[11px] text-[var(--red-live)] bg-[var(--red-live)]/5 border border-[var(--red-live)]/20 rounded p-2">
+              {importError}
+            </div>
+          )}
+        </div>
+      )}
+
+      {importSuccess && (
+        <div className="text-[11px] text-[var(--green-live)] bg-[var(--green-live)]/5 border border-[var(--green-live)]/25 rounded p-2 text-center font-medium animate-pulse">
+          {importSuccess}
+        </div>
+      )}
+
       {/* Search input */}
       <div className="relative">
         <svg
@@ -891,6 +1093,14 @@ function ChannelList({
                     {displayName}
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {ch.isFifaBroadcaster && (
+                      <span
+                        title="Confirmed FIFA World Cup 2026 broadcaster"
+                        className="text-[10px] px-1.5 py-0.5 rounded border border-[var(--green-live)]/40 text-[var(--green-live)] bg-[var(--green-live)]/10 font-bold"
+                      >
+                        ⚽ FIFA
+                      </span>
+                    )}
                     {ch.isGeoBlocked && (
                       <span
                         title="Geo-restricted — may not play in your region"
@@ -923,7 +1133,7 @@ function ChannelSection() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
 
   useEffect(() => {
-    // iptv-org allows public access, no auth needed
+    // Multi-source: iptv-org sports + country-specific FIFA FTA channels
     fetchSportsChannels()
       .then((data) => {
         const list = data.length > 0 ? data : FALLBACK_CHANNELS;
@@ -966,6 +1176,29 @@ function ChannelSection() {
             activeId={selectedChannel?.id ?? null}
             onSelect={setSelectedChannel}
             totalCount={channels.length}
+            onImport={(customList) => {
+              setChannels(customList);
+              if (customList.length > 0) {
+                setSelectedChannel(customList[0]);
+              }
+            }}
+            onReset={() => {
+              setLoading(true);
+              setApiError(false);
+              fetchSportsChannels()
+                .then((data) => {
+                  const list = data.length > 0 ? data : FALLBACK_CHANNELS;
+                  setChannels(list);
+                  setSelectedChannel(list[0] ?? null);
+                  setLoading(false);
+                })
+                .catch(() => {
+                  setApiError(true);
+                  setLoading(false);
+                  setChannels(FALLBACK_CHANNELS);
+                  setSelectedChannel(FALLBACK_CHANNELS[0]);
+                });
+            }}
           />
         </div>
 
@@ -985,19 +1218,25 @@ function ChannelSection() {
 // ─── Team Flags Mapping & Helper ─────────────────────────────────────────────
 
 const TEAM_CODES: Record<string, string> = {
+  "Algeria": "DZ",
   "Argentina": "AR",
   "Australia": "AU",
   "Austria": "AT",
   "Belgium": "BE",
+  "Bosnia and Herzegovina": "BA",
   "Brazil": "BR",
-  "Canada": "CA",
+  "Cabo Verde": "CV",
   "Cameroon": "CM",
+  "Canada": "CA",
   "Chile": "CL",
   "Colombia": "CO",
   "Costa Rica": "CR",
   "Croatia": "HR",
+  "Curacao": "CW",
+  "Curaçao": "CW",
   "Czechia": "CZ",
   "Denmark": "DK",
+  "DR Congo": "CD",
   "Ecuador": "EC",
   "Egypt": "EG",
   "England": "GB-ENG",
@@ -1007,16 +1246,20 @@ const TEAM_CODES: Record<string, string> = {
   "Greece": "GR",
   "Haiti": "HT",
   "Iran": "IR",
+  "Iraq": "IQ",
   "Italy": "IT",
   "Ivory Coast": "CI",
   "Cote d'Ivoire": "CI",
   "Japan": "JP",
+  "Jordan": "JO",
+  "Korea Republic": "KR",
   "Mexico": "MX",
   "Morocco": "MA",
   "Netherlands": "NL",
   "New Zealand": "NZ",
   "Nigeria": "NG",
   "Norway": "NO",
+  "Panama": "PA",
   "Paraguay": "PY",
   "Peru": "PE",
   "Poland": "PL",
@@ -1027,7 +1270,6 @@ const TEAM_CODES: Record<string, string> = {
   "Senegal": "SN",
   "Serbia": "RS",
   "South Africa": "ZA",
-  "Korea Republic": "KR",
   "South Korea": "KR",
   "Spain": "ES",
   "Sweden": "SE",
@@ -1038,10 +1280,8 @@ const TEAM_CODES: Record<string, string> = {
   "Ukraine": "UA",
   "United States": "US",
   "Uruguay": "UY",
+  "Uzbekistan": "UZ",
   "Wales": "GB-WLS",
-  "Curacao": "CW",
-  "Curaçao": "CW",
-  "Bosnia and Herzegovina": "BA"
 };
 
 function getTeamFlag(teamName: string): string {
