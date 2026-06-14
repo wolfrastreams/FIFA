@@ -1,0 +1,139 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-gold: var(--gold);
+  --color-green-live: var(--green-live);
+  --color-red-live: var(--red-live);
+  --color-border: var(--border);
+  --font-display: "Bebas Neue", sans-serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+:root {
+  --background: #050B1A;
+  --foreground: #F5F5F5;
+  --navy: #050B1A;
+  --navy-light: #0B1730;
+  --gold: #D4AF37;
+  --green-live: #00C853;
+  --red-live: #FF1744;
+  --border: rgba(212, 175, 55, 0.2);
+}
+
+@layer base {
+  * { border-color: var(--border); }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.02em;
+  }
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.95); }
+}
+@utility animate-pulse-live {
+  animation: pulse-live 1.2s ease-in-out infinite;
+}
+
+@keyframes glow-gold {
+  0%, 100% { box-shadow: 0 0 12px rgba(212, 175, 55, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.7); }
+}
+@utility glow-gold {
+  animation: glow-gold 2s ease-in-out infinite;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: 3.75rem; /* 60px */
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 768px) {
+  .hero-title {
+    font-size: 4.5rem; /* 72px */
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-title {
+    font-size: 7.5rem; /* 120px */
+  }
+}
+
+.text-gold-custom {
+  color: var(--gold) !important;
+}
+
+.text-green-live-custom {
+  color: var(--green-live) !important;
+}
+
+.btn-gold-custom {
+  background-color: var(--gold) !important;
+  color: var(--navy) !important;
+  box-shadow: 0 10px 15px -3px rgba(212, 175, 55, 0.3) !important;
+}
+
+.border-gold-custom {
+  border-color: rgba(212, 175, 55, 0.4) !important;
+}
+
+.link-gold-hover-custom:hover {
+  color: var(--gold) !important;
+}
+
+.webzolia-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 175, 55, 0.3) !important;
+  background-color: rgba(212, 175, 55, 0.08) !important;
+  color: var(--gold) !important;
+  padding: 6px 14px;
+  font-size: 0.75rem; /* text-xs */
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
+}
+
+.webzolia-badge:hover {
+  background-color: var(--gold) !important;
+  color: var(--navy) !important;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important;
+  transform: translateY(-2px);
+}
+
+.webzolia-dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background-color: var(--gold);
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+
+.webzolia-badge:hover .webzolia-dot {
+  background-color: var(--navy) !important;
+}
+
+
+
